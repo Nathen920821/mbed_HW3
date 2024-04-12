@@ -9,6 +9,11 @@ class ScanDelegate(DefaultDelegate):
           print ("Discovered device", dev.addr)
        elif isNewData:
           print ("Received new data from", dev.addr)
+class WriteDelegate(DefaultDelegate):
+    def __init__(self):
+        DefaultDelegate.__init__(self)
+    def handleNotification(self, cHandle, data):
+        print("A notification was received: %s" %data)
 scanner = Scanner().withDelegate(ScanDelegate())
 devices = scanner.scan(10.0)
 n=0
@@ -27,39 +32,32 @@ print (addr[num])
 #
 print ("Connecting...")
 dev = Peripheral(addr[num], 'random')
-#
+dev.setDelegate(WriteDelegate())
 print ("Services...")
 for svc in dev.services:
     print (str(svc))
 #
 try:
-    testService = dev.getServiceByUUID(UUID(0xfff0))
+    testService = dev.getServiceByUUID(UUID(0x8888))
     for ch in testService.getCharacteristics():
         print (str(ch))
-       # descriptors = ch.getDescriptors()
-       # print("number of des",len(descriptors))
-       # for desc in descriptors:
-       #     print("    Descriptor:", desc.uuid)
-       #     # Changing the value of the descriptor
-       #     new_value = b'\x00\x02\x00\x00\x00\x00\x00'  # Provide the new value
-       #     desc.write(new_value)
-       #     desc_read = desc.read()
-       #     print(desc_read)
+    ch = dev.getCharacteristics(uuid=UUID(0x9898))[0]
 
-#
-    ccc_uuid = UUID(0x2902)
-    ch = dev.getCharacteristics(uuid=UUID(0xfff4))[0]
-    descriptors = ch.getDescriptors()
-    print("number of des",len(descriptors))
-    for desc in descriptors:
-        print("    Descriptor:", desc.uuid)
-        # Changing the value of the descriptor
-        new_value = b'\x00\x02'  # Provide the new valu
-        desc.write(new_value)
-        desc_read = desc.read()
-        print(desc_read)
-    if (ch.supportsRead()):
-        print (ch.read())
+    descriptors = ch.getDescriptors(forUUID=0x2902)[0]
+    print(descriptors)
+    # Changing the value of the descriptor
+    new_value = b'\x01\x00'  # Provide the new valu
+
+    desc_read = descriptors.read()
+    print(desc_read)
+
+    descriptors.write(new_value)
+    while True:
+        if dev.waitForNotifications(1.0):
+            continue
+        print ("Waiting...")
+    desc_read = descriptors.read()
+    print(desc_read)
     #ch.write(bytes("python","utf-8"),withResponse = True)
 #
 finally:
